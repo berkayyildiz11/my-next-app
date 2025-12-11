@@ -17,14 +17,14 @@ export default function Header() {
 
   return (
     <header 
-      className="w-full text-white px-6 py-9 sticky top-0 z-50 transition-shadow duration-300"
+      className="w-full text-zinc-900 px-6 py-9 sticky top-0 z-50 transition-shadow duration-300"
       style={{ 
         backgroundColor: 'var(--background)',
         boxShadow: isScrolled ? '0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)' : 'none'
       }}
     >
       <div className="header-content mx-auto">
-        <nav className="flex items-center justify-between">
+        <nav className="flex items-center gap-36">
           <h1 className="text-xl font-semibold">
             <Link href="/">My Website</Link>
           </h1>

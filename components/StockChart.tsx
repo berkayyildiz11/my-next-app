@@ -14,8 +14,11 @@ interface ChartProps {
     yAxisKey: string;
 }
 
+const periods = ['1G', '1H', '1A', '3A', '1Y', '2Y', '5Y'];
+
 export const StockChart: React.FC<ChartProps> = ({ data, xAxisKey, yAxisKey }) => {
     const [chartData, setChartData] = useState<StockDataPoint[]>(data.length > 0 ? data : []);
+    const [activePeriod, setActivePeriod] = useState('1G');
 
     useEffect(() => {
         const fetchAppleData = async () => {
@@ -55,42 +58,61 @@ export const StockChart: React.FC<ChartProps> = ({ data, xAxisKey, yAxisKey }) =
     }, []);
 
     return (
-        <div className="chart-container" style={{ backgroundColor: '#000', padding: '20px', borderRadius: '8px', width: '33.33%', display: 'inline-block' }}>
+        <div className="chart-container" style={{ padding: '20px', borderRadius: '8px',
+                                                width: '90%', display: 'block', margin: '0 auto' }}>
             <ResponsiveContainer width="100%" height={500}>
                 <LineChart data={chartData} margin={{ top: 20, right: 30, left: 60, bottom: 60 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={true} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="transparent" vertical={true} />
                     <XAxis 
-                        dataKey={xAxisKey} 
                         stroke="#888" 
-                        interval={2}
-                        angle={-45}
                         textAnchor="end"
                         height={100}
-                        style={{ fontSize: '12px' }}
+                        style={{ fontSize: '12px', strokeDasharray: '3 3' }}
+                        tick={false}
                     />
                     <YAxis 
                         stroke="#888"
-                        domain={['dataMin - 0.5', 'dataMax + 0.5']}
-                        label={{ value: 'Price (USD)', angle: -90, position: 'insideLeft', offset: 10, fill: '#888' }}
+                        axisLine={false}
+                        domain={[
+                            (dataMin: number) => Math.floor(dataMin - 0.5),
+                            (dataMax: number) => Math.ceil(dataMax + 0.5)
+                        ]}
+                        orientation='right'
                         style={{ fontSize: '12px' }}
                     />
                     <Tooltip 
-                        contentStyle={{ backgroundColor: '#1a1a1a', border: '2px solid #4285F4', borderRadius: '8px', color: '#fff' }}
+                        contentStyle={{ backgroundColor: '#444444', border: '2px solid #4285F4', borderRadius: '8px', color: '#fff' }}
                         formatter={(value: any) => [`$${parseFloat(value).toFixed(2)}`, 'Price']}
                         labelStyle={{ color: '#4285F4' }}
                     />
-                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
                     <Line 
                         type="monotone" 
                         dataKey={yAxisKey} 
                         stroke="#4285F4" 
-                        dot={{ fill: '#4285F4', r: 4 }}
+                        dot={false}  // { fill: '#4285F4', r: 4 }
                         activeDot={{ r: 6 }}
                         strokeWidth={2}
                         isAnimationActive={true}
                     />
                 </LineChart>
             </ResponsiveContainer>
+            <div className="flex justify-between border-t border-gray-100 pt-4">
+                <div className="flex gap-6 mx-auto">
+                    {periods.map((period) => (
+                        <button
+                            key={period}
+                            onClick={() => setActivePeriod(period)}
+                            className={`text-sm font-medium px-3 py-1 rounded transition-colors ${
+                                activePeriod === period 
+                                ? 'bg-gray-100 text-gray-900' 
+                                : 'text-gray-400 hover:text-gray-600'
+                            }`}
+                        >
+                            {period}
+                        </button>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 };

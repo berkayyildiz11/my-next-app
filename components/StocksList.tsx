@@ -1,13 +1,13 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   ColumnDef,
   ColumnFiltersState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   SortingState,
   useReactTable,
@@ -74,6 +74,25 @@ export const columns: ColumnDef<Stocks>[] = [
   {
     accessorKey: "change",
     header: "Change",
+    cell: ({ getValue }) => {
+      const value = getValue<string>();
+      let colorClass: string;
+      switch (true) {
+        case value.startsWith('+'):
+          colorClass = 'text-green-500';
+          break;
+        case value.startsWith('-'):
+          colorClass = 'text-red-500';
+          break;
+        default:
+          colorClass = 'text-gray-500';
+      }
+      return (
+        <span className={colorClass}>
+          {value}
+        </span>
+      );
+    }
   },
 ];
 
@@ -81,6 +100,7 @@ export default function StocksList() {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const router = useRouter()
 
   const table = useReactTable({
     data,
@@ -100,24 +120,24 @@ export default function StocksList() {
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex items-center py-6">
         <Input
-          placeholder="Filter stocks..."
+          placeholder="Search stocks..."
           value={(table.getColumn("symbol")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("symbol")?.setFilterValue(event.target.value)
           }
-          className="max-w-sm"
+          className="max-w-sm border-gray-700 focus:border-blue-500"
         />
       </div>
-      <div className="overflow-hidden rounded-md border">
+      <div className="w-full">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="border-b border-gray-800 hover:bg-transparent">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} className="text-gray-600 font-semibold py-4">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -135,10 +155,12 @@ export default function StocksList() {
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
+                  onClick={() => router.push(`/us-stocks/${((row.original.symbol).toLowerCase())}`)}
+                  className="border-b border-gray-400 hover:bg-gray-900/30 transition-colors cursor-pointer"
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="py-4">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -151,7 +173,7 @@ export default function StocksList() {
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="h-24 text-center text-gray-500"
                 >
                   No results.
                 </TableCell>
@@ -160,8 +182,6 @@ export default function StocksList() {
           </TableBody>
         </Table>
       </div>
-      <br  />
-      <br  />
     </div>
   )
 }
