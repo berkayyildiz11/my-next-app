@@ -14,6 +14,7 @@ import {
   VisibilityState,
 } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton"; // <--- IMPORT SKELETON
 import {
   Table,
   TableBody,
@@ -23,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// 1. STATIC DATA (Source of Truth for Name & Revenue)
+// 1. STATIC DATA
 const COMPANY_DETAILS: Record<string, { name: string; revenue: string }> = {
   AAPL: { name: "Apple Inc.", revenue: "394.3B" },
   MSFT: { name: "Microsoft Corp.", revenue: "198.3B" },
@@ -49,15 +50,16 @@ const COMPANY_DETAILS: Record<string, { name: string; revenue: string }> = {
 
 const TARGET_SYMBOLS = Object.keys(COMPANY_DETAILS);
 
+// 2. TYPE DEFINITION (Price/Change can be null now)
 export type Stocks = {
   symbol: string;
   name: string;
   revenue: string;
-  price: string;
-  change: string;
+  price: string | null; // <--- Allow null for loading state
+  change: string | null; // <--- Allow null for loading state
 };
 
-// 2. COLUMNS
+// 3. COLUMNS WITH SKELETONS
 export const columns: ColumnDef<Stocks>[] = [
   {
     accessorKey: "symbol",
@@ -87,18 +89,27 @@ export const columns: ColumnDef<Stocks>[] = [
     accessorKey: "revenue",
     header: "Revenue",
     cell: ({ getValue }) => (
-      <span className="text-black">${getValue<string>()}</span>
+      <span className="text-black">{getValue<string>()}</span>
     ),
   },
   {
     accessorKey: "price",
     header: "Price",
+    // IF VALUE IS NULL, SHOW SKELETON
+    cell: ({ getValue }) => {
+      const val = getValue<string | null>();
+      if (!val) return <Skeleton className="h-4 w-16 bg-gray-700" />;
+      return <span>{val}</span>;
+    },
   },
   {
     accessorKey: "change",
     header: "Change",
+    // IF VALUE IS NULL, SHOW SKELETON
     cell: ({ getValue }) => {
-      const value = getValue<string>();
+      const value = getValue<string | null>();
+      if (!value) return <Skeleton className="h-4 w-12 bg-gray-700" />;
+
       let colorClass = "text-gray-500";
       if (value.startsWith("+")) colorClass = "text-green-500";
       if (value.startsWith("-")) colorClass = "text-red-500";
@@ -107,10 +118,21 @@ export const columns: ColumnDef<Stocks>[] = [
   },
 ];
 
-export default function StocksList() {
-  const [data, setData] = React.useState<Stocks[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export default function StocksList() {
+  // 4. INITIALIZE STATE WITH ALL 20 ITEMS (BUT NO PRICES YET)
+  const [data, setData] = React.useState<Stocks[]>(() => {
+    return TARGET_SYMBOLS.map((symbol) => ({
+      symbol,
+      name: COMPANY_DETAILS[symbol].name,
+      revenue: COMPANY_DETAILS[symbol].revenue,
+      price: null, // Loading...
+      change: null, // Loading...
+    }));
+  });
+
+  const [isLoading, setIsLoading] = React.useState(true);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -119,62 +141,75 @@ export default function StocksList() {
     React.useState<VisibilityState>({});
 
   React.useEffect(() => {
-    async function fetchAllStocks() {
+    let isMounted = true;
+
+    async function fetchStocksInChunks() {
       setIsLoading(true);
+      const chunkSize = 5;
 
-      const promises = TARGET_SYMBOLS.map(async (symbol) => {
-        try {
-          // Get Static Data (Name, Revenue)
-          const staticInfo = COMPANY_DETAILS[symbol];
+      for (let i = 0; i < TARGET_SYMBOLS.length; i += chunkSize) {
+        if (!isMounted) break;
 
-          // Get Live Data (Price)
-          const res = await fetch(`/api/stock?symbol=${symbol}`);
-          const stockData = await res.json();
+        const chunk = TARGET_SYMBOLS.slice(i, i + chunkSize);
 
-          if (stockData.error) throw new Error(stockData.error);
+        const promises = chunk.map(async (symbol) => {
+          try {
+            const res = await fetch(`/api/stock?symbol=${symbol}`);
+            const stockData = await res.json();
 
-          const current = stockData.price;
-          const prev = stockData.previousClose;
-          let changeString = "0.00%";
+            if (stockData.error) throw new Error(stockData.error);
 
-          if (current && prev) {
-            const change = ((current - prev) / prev) * 100;
-            const sign = change >= 0 ? "+" : "";
-            changeString = `${sign}${change.toFixed(2)}%`;
+            const current = stockData.price;
+            const prev = stockData.previousClose;
+            let changeString = "0.00%";
+
+            if (current && prev) {
+              const change = ((current - prev) / prev) * 100;
+              const sign = change >= 0 ? "+" : "";
+              changeString = `${sign}${change.toFixed(2)}%`;
+            }
+
+            return {
+              symbol,
+              price: `$${stockData.price}`,
+              change: changeString,
+            };
+          } catch (error) {
+            console.error(`Failed to fetch ${symbol}`, error);
+            return { symbol, price: "N/A", change: "-" };
           }
+        });
 
-          // MERGE THEM
-          return {
-            symbol: symbol,
-            name: staticInfo.name, // From our static list
-            revenue: staticInfo.revenue, // From our static list
-            price: `$${stockData.price}`,
-            change: changeString,
-          };
-        } catch (error) {
-          console.error(`Failed to fetch ${symbol}`, error);
-          // Fallback if API fails: show static data with placeholders
-          const staticInfo = COMPANY_DETAILS[symbol];
-          return {
-            symbol: symbol,
-            name: staticInfo.name,
-            revenue: staticInfo.revenue,
-            price: "N/A",
-            change: "-",
-          };
+        const results = await Promise.all(promises);
+
+        // 5. UPDATE ONLY THE ROWS WE JUST FETCHED
+        if (isMounted) {
+          setData((prevData) => {
+            // Create a quick lookup map for the new results
+            const updates = new Map(results.map((r) => [r.symbol, r]));
+
+            return prevData.map((item) => {
+              if (updates.has(item.symbol)) {
+                const update = updates.get(item.symbol)!;
+                return { ...item, price: update.price, change: update.change };
+              }
+              return item;
+            });
+          });
         }
-      });
 
-      const results = await Promise.all(promises);
-      const validResults = results.filter(
-        (item): item is Stocks => item !== null
-      );
-
-      setData(validResults);
-      setIsLoading(false);
+        if (i + chunkSize < TARGET_SYMBOLS.length) {
+          await delay(2000); // Wait 2 seconds before next batch
+        }
+      }
+      if (isMounted) setIsLoading(false);
     }
 
-    fetchAllStocks();
+    fetchStocksInChunks();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const table = useReactTable({
@@ -186,11 +221,7 @@ export default function StocksList() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-    },
+    state: { sorting, columnFilters, columnVisibility },
   });
 
   return (
@@ -205,7 +236,9 @@ export default function StocksList() {
           className="max-w-sm border-gray-700 focus:border-blue-500"
         />
         {isLoading && (
-          <span className="ml-4 text-yellow-500">Updating live prices...</span>
+          <span className="ml-4 text-yellow-500 animate-pulse text-sm">
+            Fetching live prices...
+          </span>
         )}
       </div>
       <div className="w-full">
@@ -233,33 +266,19 @@ export default function StocksList() {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className="border-b border-gray-400 hover:bg-gray-900/30 transition-colors"
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-4">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center text-gray-500"
-                >
-                  {isLoading ? "Fetching market data..." : "No results."}
-                </TableCell>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow
+                key={row.id}
+                className="border-b border-gray-400 hover:bg-gray-900/30 transition-colors"
+                data-state={row.getIsSelected() && "selected"}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id} className="py-4">
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
               </TableRow>
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
