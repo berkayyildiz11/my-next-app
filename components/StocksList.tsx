@@ -57,6 +57,7 @@ export type Stocks = {
   revenue: string;
   price: string | null;
   change: string | null;
+  lastFetched: number; // <--- 1. NEW FIELD: Tracks time per stock
 };
 
 // 2. GLOBAL CACHE
@@ -66,11 +67,12 @@ let globalStockData: Stocks[] = TARGET_SYMBOLS.map((symbol) => ({
   revenue: COMPANY_DETAILS[symbol].revenue,
   price: null,
   change: null,
+  lastFetched: 0, // Initialize as 0 (never fetched)
 }));
 
-let globalLastFetchTime = 0;
+// We can remove globalLastFetchTime as we now track per item
+// let globalLastFetchTime = 0;
 
-// 3. HELPER FUNCTION
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const columns: ColumnDef<Stocks>[] = [
@@ -130,18 +132,14 @@ export default function StocksList() {
   const router = useRouter();
 
   const [data, setData] = React.useState<Stocks[]>(globalStockData);
-
-  // 1. ADD GLOBAL FILTER STATE
   const [globalFilter, setGlobalFilter] = React.useState("");
 
+  // Only show "Loading..." if the first item has never been fetched
   const [isFirstLoad, setIsFirstLoad] = React.useState(
     globalStockData[0].price === null
   );
-  const [lastUpdated, setLastUpdated] = React.useState<string>(
-    globalLastFetchTime > 0
-      ? new Date(globalLastFetchTime).toLocaleTimeString()
-      : ""
-  );
+
+  const [lastUpdated, setLastUpdated] = React.useState<string>("");
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -156,10 +154,27 @@ export default function StocksList() {
 
     const performFetch = async () => {
       const chunkSize = 5;
+
       for (let i = 0; i < TARGET_SYMBOLS.length; i += chunkSize) {
         if (!isMounted) return;
 
         const chunk = TARGET_SYMBOLS.slice(i, i + chunkSize);
+
+        // --- 2. SMART CHECK: SKIP IF FRESH ---
+        // Check if all items in this chunk were fetched recently (< 60 seconds)
+        const now = Date.now();
+        const isChunkFresh = chunk.every((symbol) => {
+          const cachedItem = globalStockData.find((s) => s.symbol === symbol);
+          // If item exists AND was fetched less than 60s ago
+          return cachedItem && now - cachedItem.lastFetched < 60000;
+        });
+
+        if (isChunkFresh) {
+          // console.log(`Skipping chunk ${chunk[0]}... - Data is fresh`);
+          continue; // Skip this iteration immediately
+        }
+        // -------------------------------------
+
         const promises = chunk.map(async (symbol) => {
           try {
             const res = await fetch(`/api/stock?symbol=${symbol}`);
@@ -192,51 +207,40 @@ export default function StocksList() {
             const updates = new Map(
               results.filter((r) => r !== null).map((r) => [r!.symbol, r!])
             );
+
             const newData = prevData.map((item) => {
               if (updates.has(item.symbol)) {
                 const update = updates.get(item.symbol)!;
-                return { ...item, price: update.price, change: update.change };
+                return {
+                  ...item,
+                  price: update.price,
+                  change: update.change,
+                  lastFetched: Date.now(), // <--- 3. UPDATE TIMESTAMP
+                };
               }
               return item;
             });
 
-            globalStockData = newData;
+            globalStockData = newData; // Sync global cache
             return newData;
           });
+
+          setLastUpdated(new Date().toLocaleTimeString());
         }
 
         if (i + chunkSize < TARGET_SYMBOLS.length) {
-          await delay(3000);
+          await delay(2000);
         }
       }
 
       if (isMounted) {
-        const now = Date.now();
-        globalLastFetchTime = now;
-        setLastUpdated(new Date(now).toLocaleTimeString());
         setIsFirstLoad(false);
-
-        timeoutId = setTimeout(() => runLoop(true), 60000);
+        // Restart loop in 5 seconds (it will skip fresh data anyway)
+        timeoutId = setTimeout(() => performFetch(), 5000);
       }
     };
 
-    const runLoop = async (force: boolean) => {
-      if (!isMounted) return;
-
-      const now = Date.now();
-      const timeSinceLast = now - globalLastFetchTime;
-
-      if (!force && timeSinceLast < 60000) {
-        const waitTime = 60000 - timeSinceLast;
-        console.log(`Data is fresh. Waiting ${waitTime}ms...`);
-        timeoutId = setTimeout(() => runLoop(true), waitTime);
-        return;
-      }
-
-      await performFetch();
-    };
-
-    runLoop(false);
+    performFetch();
 
     return () => {
       isMounted = false;
@@ -249,7 +253,6 @@ export default function StocksList() {
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    // 2. CONNECT GLOBAL FILTER TO TABLE
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -259,7 +262,7 @@ export default function StocksList() {
       sorting,
       columnFilters,
       columnVisibility,
-      globalFilter, // Pass state here
+      globalFilter,
     },
   });
 
@@ -269,10 +272,9 @@ export default function StocksList() {
         <div className="flex items-center">
           <Input
             placeholder="Search stocks or companies..."
-            // 3. UPDATE INPUT TO USE GLOBAL FILTER
             value={globalFilter ?? ""}
             onChange={(event) => setGlobalFilter(event.target.value)}
-            className="w-[210px] border-gray-700 focus:border-blue-500"
+            className="w-[600px] border-gray-700 focus:border-blue-500"
           />
           {isFirstLoad && (
             <span className="ml-4 text-black animate-pulse text-sm">
