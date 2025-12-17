@@ -72,9 +72,6 @@ export const StockChart: React.FC<ChartProps> = ({
       }
     };
 
-    // Fetch immediately
-    fetchStockData();
-
     // Then fetch every 10 seconds
     const interval = setInterval(fetchStockData, 10000);
 

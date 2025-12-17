@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -14,7 +15,7 @@ import {
   VisibilityState,
 } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton"; // <--- IMPORT SKELETON
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -50,16 +51,28 @@ const COMPANY_DETAILS: Record<string, { name: string; revenue: string }> = {
 
 const TARGET_SYMBOLS = Object.keys(COMPANY_DETAILS);
 
-// 2. TYPE DEFINITION (Price/Change can be null now)
 export type Stocks = {
   symbol: string;
   name: string;
   revenue: string;
-  price: string | null; // <--- Allow null for loading state
-  change: string | null; // <--- Allow null for loading state
+  price: string | null;
+  change: string | null;
 };
 
-// 3. COLUMNS WITH SKELETONS
+// 2. GLOBAL CACHE
+let globalStockData: Stocks[] = TARGET_SYMBOLS.map((symbol) => ({
+  symbol,
+  name: COMPANY_DETAILS[symbol].name,
+  revenue: COMPANY_DETAILS[symbol].revenue,
+  price: null,
+  change: null,
+}));
+
+let globalLastFetchTime = 0;
+
+// 3. HELPER FUNCTION
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const columns: ColumnDef<Stocks>[] = [
   {
     accessorKey: "symbol",
@@ -67,7 +80,7 @@ export const columns: ColumnDef<Stocks>[] = [
     cell: ({ row }) => (
       <Link
         href={`/us-stocks/${row.original.symbol}`}
-        className="text-blue-500 font-bold hover:underline"
+        className="text-black font-bold"
       >
         {row.original.symbol}
       </Link>
@@ -77,10 +90,7 @@ export const columns: ColumnDef<Stocks>[] = [
     accessorKey: "name",
     header: "Company Name",
     cell: ({ row }) => (
-      <Link
-        href={`/us-stocks/${row.original.symbol}`}
-        className="hover:text-blue-400 hover:underline"
-      >
+      <Link href={`/us-stocks/${row.original.symbol}`} className="text-black">
         {row.original.name}
       </Link>
     ),
@@ -89,13 +99,12 @@ export const columns: ColumnDef<Stocks>[] = [
     accessorKey: "revenue",
     header: "Revenue",
     cell: ({ getValue }) => (
-      <span className="text-black">{getValue<string>()}</span>
+      <span className="text-black">${getValue<string>()}</span>
     ),
   },
   {
     accessorKey: "price",
     header: "Price",
-    // IF VALUE IS NULL, SHOW SKELETON
     cell: ({ getValue }) => {
       const val = getValue<string | null>();
       if (!val) return <Skeleton className="h-4 w-16 bg-gray-700" />;
@@ -105,34 +114,35 @@ export const columns: ColumnDef<Stocks>[] = [
   {
     accessorKey: "change",
     header: "Change",
-    // IF VALUE IS NULL, SHOW SKELETON
     cell: ({ getValue }) => {
       const value = getValue<string | null>();
       if (!value) return <Skeleton className="h-4 w-12 bg-gray-700" />;
 
       let colorClass = "text-gray-500";
-      if (value.startsWith("+")) colorClass = "text-green-500";
-      if (value.startsWith("-")) colorClass = "text-red-500";
+      if (value.startsWith("+")) colorClass = "text-green-600";
+      if (value.startsWith("-")) colorClass = "text-red-600";
       return <span className={colorClass}>{value}</span>;
     },
   },
 ];
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 export default function StocksList() {
-  // 4. INITIALIZE STATE WITH ALL 20 ITEMS (BUT NO PRICES YET)
-  const [data, setData] = React.useState<Stocks[]>(() => {
-    return TARGET_SYMBOLS.map((symbol) => ({
-      symbol,
-      name: COMPANY_DETAILS[symbol].name,
-      revenue: COMPANY_DETAILS[symbol].revenue,
-      price: null, // Loading...
-      change: null, // Loading...
-    }));
-  });
+  const router = useRouter();
 
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [data, setData] = React.useState<Stocks[]>(globalStockData);
+
+  // 1. ADD GLOBAL FILTER STATE
+  const [globalFilter, setGlobalFilter] = React.useState("");
+
+  const [isFirstLoad, setIsFirstLoad] = React.useState(
+    globalStockData[0].price === null
+  );
+  const [lastUpdated, setLastUpdated] = React.useState<string>(
+    globalLastFetchTime > 0
+      ? new Date(globalLastFetchTime).toLocaleTimeString()
+      : ""
+  );
+
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -142,33 +152,28 @@ export default function StocksList() {
 
   React.useEffect(() => {
     let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
 
-    async function fetchStocksInChunks() {
-      setIsLoading(true);
+    const performFetch = async () => {
       const chunkSize = 5;
-
       for (let i = 0; i < TARGET_SYMBOLS.length; i += chunkSize) {
-        if (!isMounted) break;
+        if (!isMounted) return;
 
         const chunk = TARGET_SYMBOLS.slice(i, i + chunkSize);
-
         const promises = chunk.map(async (symbol) => {
           try {
             const res = await fetch(`/api/stock?symbol=${symbol}`);
             const stockData = await res.json();
-
             if (stockData.error) throw new Error(stockData.error);
 
             const current = stockData.price;
             const prev = stockData.previousClose;
             let changeString = "0.00%";
-
             if (current && prev) {
               const change = ((current - prev) / prev) * 100;
               const sign = change >= 0 ? "+" : "";
               changeString = `${sign}${change.toFixed(2)}%`;
             }
-
             return {
               symbol,
               price: `$${stockData.price}`,
@@ -176,39 +181,66 @@ export default function StocksList() {
             };
           } catch (error) {
             console.error(`Failed to fetch ${symbol}`, error);
-            return { symbol, price: "N/A", change: "-" };
+            return null;
           }
         });
 
         const results = await Promise.all(promises);
 
-        // 5. UPDATE ONLY THE ROWS WE JUST FETCHED
         if (isMounted) {
           setData((prevData) => {
-            // Create a quick lookup map for the new results
-            const updates = new Map(results.map((r) => [r.symbol, r]));
-
-            return prevData.map((item) => {
+            const updates = new Map(
+              results.filter((r) => r !== null).map((r) => [r!.symbol, r!])
+            );
+            const newData = prevData.map((item) => {
               if (updates.has(item.symbol)) {
                 const update = updates.get(item.symbol)!;
                 return { ...item, price: update.price, change: update.change };
               }
               return item;
             });
+
+            globalStockData = newData;
+            return newData;
           });
         }
 
         if (i + chunkSize < TARGET_SYMBOLS.length) {
-          await delay(2000); // Wait 2 seconds before next batch
+          await delay(3000);
         }
       }
-      if (isMounted) setIsLoading(false);
-    }
 
-    fetchStocksInChunks();
+      if (isMounted) {
+        const now = Date.now();
+        globalLastFetchTime = now;
+        setLastUpdated(new Date(now).toLocaleTimeString());
+        setIsFirstLoad(false);
+
+        timeoutId = setTimeout(() => runLoop(true), 60000);
+      }
+    };
+
+    const runLoop = async (force: boolean) => {
+      if (!isMounted) return;
+
+      const now = Date.now();
+      const timeSinceLast = now - globalLastFetchTime;
+
+      if (!force && timeSinceLast < 60000) {
+        const waitTime = 60000 - timeSinceLast;
+        console.log(`Data is fresh. Waiting ${waitTime}ms...`);
+        timeoutId = setTimeout(() => runLoop(true), waitTime);
+        return;
+      }
+
+      await performFetch();
+    };
+
+    runLoop(false);
 
     return () => {
       isMounted = false;
+      clearTimeout(timeoutId);
     };
   }, []);
 
@@ -217,28 +249,43 @@ export default function StocksList() {
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    // 2. CONNECT GLOBAL FILTER TO TABLE
+    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    state: { sorting, columnFilters, columnVisibility },
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      globalFilter, // Pass state here
+    },
   });
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-6">
-        <Input
-          placeholder="Search stocks..."
-          value={(table.getColumn("symbol")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("symbol")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm border-gray-700 focus:border-blue-500"
-        />
-        {isLoading && (
-          <span className="ml-4 text-yellow-500 animate-pulse text-sm">
-            Fetching live prices...
-          </span>
+      <div className="flex items-center justify-between py-6">
+        <div className="flex items-center">
+          <Input
+            placeholder="Search stocks or companies..."
+            // 3. UPDATE INPUT TO USE GLOBAL FILTER
+            value={globalFilter ?? ""}
+            onChange={(event) => setGlobalFilter(event.target.value)}
+            className="w-[210px] border-gray-700 focus:border-blue-500"
+          />
+          {isFirstLoad && (
+            <span className="ml-4 text-black animate-pulse text-sm">
+              Fetching live data...
+            </span>
+          )}
+        </div>
+
+        {lastUpdated && (
+          <div className="text-black text-sm">
+            Last updated:{" "}
+            <span className="text-black font-mono">{lastUpdated}</span>
+          </div>
         )}
       </div>
       <div className="w-full">
@@ -269,7 +316,8 @@ export default function StocksList() {
             {table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
-                className="border-b border-gray-400 hover:bg-gray-900/30 transition-colors"
+                onClick={() => router.push(`/us-stocks/${row.original.symbol}`)}
+                className="border-b border-gray-400 hover:bg-gray-900/30 transition-colors cursor-pointer"
                 data-state={row.getIsSelected() && "selected"}
               >
                 {row.getVisibleCells().map((cell) => (
