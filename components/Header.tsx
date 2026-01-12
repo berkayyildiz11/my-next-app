@@ -18,7 +18,7 @@ export default function Header() {
 
   return (
     <header 
-      className="w-full text-zinc-900 px-6 py-0 sticky top-0 z-50 transition-shadow duration-300"
+      className="w-full text-zinc-900 px-6 py-0 sticky top-0 z-50 transition-shadow duration-300 bg-white"
       style={{ 
         boxShadow: isScrolled ? '0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)' : 'none'
       }}
@@ -38,8 +38,11 @@ export default function Header() {
                 </div>
             </Link>
 
-          <ul className="flex gap-6 font-semibold">
+          <ul className="flex gap-8 font-semibold">
             <li><Link href="/us-stocks">US Stocks</Link></li>
+			<li><Link href="/news">News</Link></li>
+			<li><Link href="/contact">Contact</Link></li>
+			<li><Link href="/about">About</Link></li>
           </ul>
         </nav>
       </div>

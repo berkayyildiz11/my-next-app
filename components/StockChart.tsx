@@ -100,9 +100,10 @@ export const StockChart: React.FC<ChartProps> = ({
             vertical={true}
           />
           <XAxis
+            dataKey={xAxisKey}
             stroke="#888"
             textAnchor="end"
-            height={100}
+            height={5}
             style={{ fontSize: "12px", strokeDasharray: "3 3" }}
             tick={false}
           />
