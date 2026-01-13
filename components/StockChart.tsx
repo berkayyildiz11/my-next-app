@@ -63,8 +63,8 @@ export const StockChart: React.FC<ChartProps> = ({
                 price: stockData.price,
               },
             ];
-            // Keep only last 20 data points
-            return updated.slice(-20);
+            // Keep only last 80 data points
+            return updated.slice(-80);
           });
         }
       } catch (error) {

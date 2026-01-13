@@ -1,4 +1,6 @@
+import Link from "next/link";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 export default function Hero() {
     return (
@@ -25,9 +27,12 @@ export default function Hero() {
                 a user-friendly interface to empower your investment decisions.
             </p>
 
-            <button className="mt-10 rounded-full bg-white px-8 py-4 text-sm font-semifold text-black hover:bg-gray-200 transition">
-                Detailed Information
-            </button>
+            <br />
+            <Link href="/about">
+                <Button className="bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 rounded-full px-6 py-6 text-md font-semibold transition-all">
+                    Detailed Information
+                </Button>
+            </Link>
             </div>
         </section>
     );

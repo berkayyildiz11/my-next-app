@@ -25,7 +25,7 @@ export default function Header() {
     >
       <div className="header-content mx-auto">	
         <nav className="flex items-center gap-36 py-4">
-            <Link href="/main-menu">
+            <Link href="/">
                 <div className="relative w-[240px] h-[70px]">
                     <Image
                         src="/logo/logo.png"
