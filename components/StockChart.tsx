@@ -131,7 +131,7 @@ export const StockChart: React.FC<ChartProps> = ({
             labelStyle={{ color: "#4285F4" }}
           />
           <Line
-            type="monotone"
+            type="natural"
             dataKey={yAxisKey}
             stroke="#4285F4"
             dot={false}
