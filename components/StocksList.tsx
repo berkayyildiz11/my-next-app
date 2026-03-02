@@ -82,7 +82,7 @@ export const columns: ColumnDef<Stocks>[] = [
     cell: ({ row }) => (
       <Link
         href={`/us-stocks/${row.original.symbol}`}
-        className="text-black font-bold"
+        className="text-zinc-900 font-bold"
       >
         {row.original.symbol}
       </Link>
@@ -92,7 +92,7 @@ export const columns: ColumnDef<Stocks>[] = [
     accessorKey: "name",
     header: "Company Name",
     cell: ({ row }) => (
-      <Link href={`/us-stocks/${row.original.symbol}`} className="text-black">
+      <Link href={`/us-stocks/${row.original.symbol}`} className="text-zinc-900">
         {row.original.name}
       </Link>
     ),
@@ -101,7 +101,7 @@ export const columns: ColumnDef<Stocks>[] = [
     accessorKey: "revenue",
     header: "Revenue",
     cell: ({ getValue }) => (
-      <span className="text-black">${getValue<string>()}</span>
+      <span className="text-zinc-900">${getValue<string>()}</span>
     ),
   },
   {
@@ -277,16 +277,16 @@ export default function StocksList() {
             className="w-[600px] border-gray-700 focus:border-blue-500"
           />
           {isFirstLoad && (
-            <span className="ml-4 text-black animate-pulse text-sm">
+            <span className="ml-4 text-zinc-900 animate-pulse text-sm">
               Fetching live data...
             </span>
           )}
         </div>
 
         {lastUpdated && (
-          <div className="text-black text-sm">
+          <div className="text-zinc-900 text-sm">
             Last updated:{" "}
-            <span className="text-black font-mono">{lastUpdated}</span>
+            <span className="text-zinc-900 font-mono">{lastUpdated}</span>
           </div>
         )}
       </div>

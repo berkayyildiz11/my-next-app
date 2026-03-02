@@ -18,35 +18,35 @@ export default function StockCard({ stock }: { stock: any }) {
     const TrendIcon = isPositive ? TrendingUp : isNegative ? TrendingDown : Minus;
 
     return (
-        <Card className="@container border-none shadow-sm bg-slate-50 hover:bg-slate-100 transition-colors duration-200 rounded-3xl cursor-pointer --------------------- group w-full">
+        <Card className="border-none shadow-sm bg-slate-50 hover:bg-slate-100 transition-colors duration-200 rounded-3xl cursor-pointer group w-full aspect-[4:3]">
             <CardContent className="px-4 py-0 h-full w-full">
                 <div className="flex justify-between items-start mb-4">
-                    <div className="w-[24cqw] h-[24cqw] rounded-full bg-white p-2 shadow-sm flex items-center justify-center overflow-hidden relative">
+                    <div className="w-12 h-12 rounded-full bg-white p-2 shadow-sm flex items-center justify-center overflow-hidden relative">
                         <Image
                             src={stock.logoUrl}
                             alt={`${stock.ticker} Logo`}
-                            width={40}
+                            width={40} 
                             height={40}
-                            className="object-contain w-full h-auto"
+                            className="object-contain"
                         />
                     </div>
 
                     <div className={`shrink-0 flex items-center gap-1 ${changeColor}`}>
-                        <TrendIcon className="w-[12cqw] h-[12cqw]" />
-                        <span className="text-[10cqw] font-bold">
+                        <TrendIcon className="w-5 h-5" />
+                        <span className="text-xl font-bold">
                             {stock.change === 0 ? "0%" : `${stock.change > 0 ? "+" : ""}${stock.change}%`}
                         </span>
                     </div>
                 </div>
 
                 <div className="space-y-1">
-                    <div className="text-indigo-600 font-bold text-[9cqw] tracking-wide">
+                    <div className="text-indigo-600 font-semibold text-sm tracking-wide">
                         {stock.ticker}
                     </div>
-                    <h3 className="font-semibold text-zinc-900 text-[8cqw] leading-tight group-hover:text-indigo-600 transition-colors truncate">
+                    <h3 className="font-bold text-zinc-900 text-md leading-tight group-hover:text-indigo-600 transition-colors truncate">
                         {stock.name}
                     </h3>
-                    <p className="text-zinc-600 font-medium text-[8cqw]">
+                    <p className="text-zinc-600 font-medium">
                         ${stock.price}
                     </p>
                 </div>
