@@ -4,7 +4,15 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
-export default function StockCard({ stock }: { stock: any }) {
+interface StockData {
+    ticker: string;
+    name: string;
+    price: string | number;
+    change: number;
+    logoUrl: string;
+}
+
+export default function StockCard({ stock }: { stock: StockData }) {
     // Logic for colors and icons
     const isPositive = stock.change > 0;
     const isNegative = stock.change < 0;
