@@ -33,7 +33,7 @@ export default function Footer(){
                 </div>
 
                 <div className="text-center text-xs border-t border-slate-700 py-4">
-                    © 2026 StockAI. All rights reserved.
+                    © 2026 FinSense. All rights reserved.
                 </div>
             </div>
         </footer>
