@@ -1,10 +1,9 @@
 "use client";
-import Link from "next/link";
 import Hero from "@/components/Hero";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ShieldAlert, BrainCircuit, Activity, Network, Zap } from "lucide-react";
 
-export default function ComingSoon() {
+export default function About() {
   return (
 	<main>
 		<div>
@@ -49,7 +48,7 @@ export default function ComingSoon() {
 						
 						{/* Model 1: Time Series / Macro */}
 						<div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] flex flex-col hover:border-blue-200 transition-colors">
-							<div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
+							<div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 mb-2">
 								<Network className="w-6 h-6" />
 							</div>
 							<h3 className="text-xl font-bold text-zinc-900">Macro Time-Series</h3>
@@ -60,7 +59,7 @@ export default function ComingSoon() {
 
 						{/* Model 2: LSTM / Micro */}
 						<div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] flex flex-col hover:border-indigo-200 transition-colors">
-							<div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shrink-0">
+							<div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shrink-0 mb-2">
 								<Activity className="w-6 h-6" />
 							</div>
 							<h3 className="text-xl font-bold text-zinc-900">Momentum Networks</h3>
@@ -71,7 +70,7 @@ export default function ComingSoon() {
 
 						{/* Model 3: FinBERT / Sentiment */}
 						<div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] flex flex-col hover:border-emerald-200 transition-colors">
-							<div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
+							<div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0 mb-2">
 								<BrainCircuit className="w-6 h-6" />
 							</div>
 							<h3 className="text-xl font-bold text-zinc-900">Sentiment Override</h3>
