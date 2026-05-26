@@ -26,7 +26,7 @@ export default function StockCard({ stock }: { stock: StockData }) {
     const TrendIcon = isPositive ? TrendingUp : isNegative ? TrendingDown : Minus;
 
     return (
-        <Card className="@container border-none shadow-sm bg-slate-50 hover:bg-slate-100 transition-colors duration-200 rounded-3xl cursor-pointer --------------------- group w-full">
+        <Card className="@container border-none shadow-sm bg-slate-50 hover:bg-slate-100 transition-colors duration-200 rounded-3xl cursor-pointer group w-full">
             <CardContent className="px-4 py-0 h-full w-full">
                 <div className="flex justify-between items-start mb-4">
                     <div className="w-[24cqw] h-[24cqw] rounded-full bg-white p-2 shadow-sm flex items-center justify-center overflow-hidden relative">
