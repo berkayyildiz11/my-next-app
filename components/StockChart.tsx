@@ -24,7 +24,18 @@ interface ChartProps {
   symbol: string;
 }
 
-const periods = ["1G", "1H", "1A", "3A", "1Y", "2Y", "5Y"];
+// Changed "5Y" to "3Y" to match the maximum allowed by your backend API
+const periods = ["1G", "1H", "1A", "3A", "1Y", "2Y", "3Y"];
+
+const periodMap: Record<string, string> = {
+  "1G": "1d",
+  "1H": "1w",
+  "1A": "1m",
+  "3A": "3m",
+  "1Y": "1y",
+  "2Y": "2y",
+  "3Y": "3y",
+};
 
 // 2. Destructure 'symbol' from the props
 export const StockChart: React.FC<ChartProps> = ({
@@ -33,50 +44,56 @@ export const StockChart: React.FC<ChartProps> = ({
   yAxisKey,
   symbol,
 }) => {
-  const [chartData, setChartData] = useState<StockDataPoint[]>(
-    data.length > 0 ? data : []
-  );
   const [activePeriod, setActivePeriod] = useState("1G");
+  const [chartData, setChartData] = useState<StockDataPoint[]>(data || []);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // 3. Rename function for clarity (fetchAppleData -> fetchStockData)
-    const fetchStockData = async () => {
+    async function fetchChartData() {
+      if (!symbol) return;
+      setIsLoading(true);
       try {
-        // 4. Pass the symbol dynamically in the URL
-        // Note: Make sure your API folder is named 'app/api/stock' so this path works
-        const response = await fetch(`/api/stock?symbol=${symbol}`);
-        const stockData = await response.json();
+        const backendPeriod = periodMap[activePeriod];
+        // Defaults to local backend if NEXT_PUBLIC_API_URL isn't set in your .env
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
-        if (stockData.error) {
-          console.error("API Error:", stockData.error);
-          return;
-        }
+        const response = await fetch(
+          `${apiUrl}/api/stocks/${symbol}/chart?period=${backendPeriod}`,
+        );
+        const json = await response.json();
 
-        if (stockData.price !== undefined) {
-          const timestamp = new Date().toLocaleTimeString();
-          setChartData((prev) => {
-            const updated = [
-              ...prev,
-              {
-                id: `${Date.now()}`,
-                time: timestamp,
-                price: stockData.price,
-              },
-            ];
-            // Keep only last 80 data points
-            return updated.slice(-80);
+        if (json.status === "success" && json.data) {
+          const formattedData = json.data.map((item: any, index: number) => {
+            const dateObj = new Date(item.date);
+
+            // Show exact time for 1 Day ("1G"), otherwise just show the date
+            const timeLabel =
+              activePeriod === "1G"
+                ? dateObj.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : dateObj.toLocaleDateString();
+
+            return {
+              id: `${item.date}-${index}`,
+              [xAxisKey]: timeLabel,
+              [yAxisKey]: item.price,
+            };
           });
+
+          setChartData(formattedData);
         }
       } catch (error) {
-        console.error("Error fetching stock data:", error);
+        console.error("Failed to fetch chart data:", error);
+      } finally {
+        setIsLoading(false);
       }
-    };
+    }
 
-    // Then fetch every 10 seconds
-    const interval = setInterval(fetchStockData, 10000);
-
-    return () => clearInterval(interval);
-  }, [symbol]); // 5. Add 'symbol' to the dependency array
+    fetchChartData();
+  }, [symbol, activePeriod, xAxisKey, yAxisKey]);
 
   return (
     <div
