@@ -26,6 +26,7 @@ interface ChartProps {
 
 // Changed "5Y" to "3Y" to match the maximum allowed by your backend API
 const periods = ["1G", "1H", "1A", "3A", "1Y", "2Y", "3Y"];
+const chartTypes = ['Line Chart', 'Candlestick Chart']
 
 const periodMap: Record<string, string> = {
   "1G": "1d",
@@ -45,6 +46,7 @@ export const StockChart: React.FC<ChartProps> = ({
   symbol,
 }) => {
   const [activePeriod, setActivePeriod] = useState("1G");
+  const [activeChartType, setChartType] = useState('line')
   const [chartData, setChartData] = useState<StockDataPoint[]>(data || []);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -106,7 +108,25 @@ export const StockChart: React.FC<ChartProps> = ({
         margin: "0 auto",
       }}
     >
+      <div className="flex justify-between pb-4">
+        <div className="flex gap-6 mx-auto">
+          {chartTypes.map((type) => (
+            <button
+              key={type}
+              onClick={() => setChartType(type)}
+              className={`text-sm font-medium px-3 py-1 rounded transition-colors ${
+                activeChartType === type
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height={500}>
+  
         <LineChart
           data={chartData}
           margin={{ top: 20, right: 30, left: 60, bottom: 60 }}
