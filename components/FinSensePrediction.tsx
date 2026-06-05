@@ -279,7 +279,7 @@ export default function FinSensePrediction({ symbol }: FinSensePredictionProps) 
                 </div>
                 <div className="mt-1 text-sm text-zinc-800">
                   {prediction?.confidence
-                    ? formatValue(prediction.confidence)
+                    ? formatValue(prediction.confidence.display)
                     : score === null
                       ? "Unavailable"
                       : formatPercentLike(score)}
