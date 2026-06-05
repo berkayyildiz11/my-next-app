@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const predictionPeriods = ["1d", "1w", "1m", "3m", "6m", "1y"] as const;
 
@@ -8,6 +8,18 @@ type PredictionPeriod = (typeof predictionPeriods)[number];
 
 type FinSensePredictionProps = {
   symbol: string;
+};
+
+type PredictionResponse = string | number | boolean | null | PredictionPayload;
+
+type PredictionPayload = {
+  prediction?: unknown;
+  message?: unknown;
+  result?: unknown;
+  data?: unknown;
+  error?: unknown;
+  detail?: unknown;
+  [key: string]: unknown;
 };
 
 const periodDescriptions: Record<PredictionPeriod, string> = {
@@ -19,14 +31,91 @@ const periodDescriptions: Record<PredictionPeriod, string> = {
   "1y": "Long-term view placeholder",
 };
 
+function formatPredictionValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  return JSON.stringify(value, null, 2);
+}
+
+function getPredictionText(json: PredictionResponse): string {
+  if (typeof json !== "object" || json === null) {
+    return formatPredictionValue(json);
+  }
+
+  const payload = json as PredictionPayload;
+  const candidate =
+    payload.prediction ??
+    payload.message ??
+    payload.result ??
+    payload.data ??
+    payload.detail ??
+    payload.error;
+
+  return formatPredictionValue(candidate ?? payload);
+}
+
 export default function FinSensePrediction({ symbol }: FinSensePredictionProps) {
   const [activePeriod, setActivePeriod] = useState<PredictionPeriod>("1d");
+  const [prediction, setPrediction] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const predictionMessage = useMemo(
-    () =>
-      `${symbol} ${activePeriod} FinSense prediction will appear here when the AI model output is connected.`,
-    [symbol, activePeriod],
-  );
+  useEffect(() => {
+    if (!symbol) return;
+
+    const controller = new AbortController();
+
+    async function fetchPrediction() {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+        const response = await fetch(
+          `${apiUrl}/api/predict/${encodeURIComponent(symbol)}?period=${encodeURIComponent(activePeriod)}`,
+          { signal: controller.signal },
+        );
+        const json = (await response.json()) as PredictionResponse;
+
+        if (!response.ok) {
+          throw new Error(getPredictionText(json) || "Prediction request failed");
+        }
+
+        setPrediction(getPredictionText(json));
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
+
+        console.error("Failed to fetch prediction:", err);
+        setPrediction("");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "FinSense prediction is unavailable right now.",
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchPrediction();
+
+    return () => controller.abort();
+  }, [symbol, activePeriod]);
 
   return (
     <section className="mt-12 rounded-lg border border-zinc-200 bg-white shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-colors hover:border-[#061c26]/30">
@@ -64,9 +153,17 @@ export default function FinSensePrediction({ symbol }: FinSensePredictionProps) 
           <div className="text-xs font-semibold uppercase text-zinc-400">
             {periodDescriptions[activePeriod]}
           </div>
-          <p className="mt-3 text-sm leading-relaxed text-zinc-700">
-            {predictionMessage}
-          </p>
+          <div className="mt-3 min-h-16 text-sm leading-relaxed text-zinc-700">
+            {isLoading ? (
+              <p>Loading {symbol} {activePeriod} prediction...</p>
+            ) : error ? (
+              <p className="text-red-600">{error}</p>
+            ) : prediction ? (
+              <pre className="whitespace-pre-wrap font-sans">{prediction}</pre>
+            ) : (
+              <p>No prediction is available for this period yet.</p>
+            )}
+          </div>
         </div>
       </div>
     </section>
