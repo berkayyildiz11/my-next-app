@@ -10,63 +10,155 @@ type FinSensePredictionProps = {
   symbol: string;
 };
 
-type PredictionResponse = string | number | boolean | null | PredictionPayload;
-
-type PredictionPayload = {
-  prediction?: unknown;
-  message?: unknown;
-  result?: unknown;
-  data?: unknown;
-  error?: unknown;
-  detail?: unknown;
+type PredictionSummary = {
+  signal?: string;
+  score?: number;
+  confidence?: Record<string, unknown>;
   [key: string]: unknown;
 };
 
-const periodDescriptions: Record<PredictionPeriod, string> = {
-  "1d": "Intraday signal placeholder",
-  "1w": "Short-term signal placeholder",
-  "1m": "Monthly outlook placeholder",
-  "3m": "Quarterly trend placeholder",
-  "6m": "Mid-term outlook placeholder",
-  "1y": "Long-term view placeholder",
+type Explanation = {
+  summary?: string;
+  baseline_score?: number;
+  final_score?: number;
+  contributions?: Record<string, number>;
+  decision_details?: unknown[];
+  [key: string]: unknown;
 };
 
-function formatPredictionValue(value: unknown): string {
+type PredictionResponse = {
+  status?: string;
+  ticker?: string;
+  period?: string;
+  prediction?: PredictionSummary;
+  weights?: Record<string, unknown>;
+  signals?: Record<string, unknown>;
+  explanatory_text?: string;
+  explanation?: Explanation;
+  detail?: unknown;
+  error?: unknown;
+  message?: unknown;
+  [key: string]: unknown;
+};
+
+function formatValue(value: unknown) {
   if (value === null || value === undefined) {
     return "";
+  }
+
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : value.toFixed(4);
   }
 
   if (typeof value === "string") {
     return value;
   }
 
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-
   return JSON.stringify(value, null, 2);
 }
 
-function getPredictionText(json: PredictionResponse): string {
-  if (typeof json !== "object" || json === null) {
-    return formatPredictionValue(json);
+function formatPercentLike(value: number) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function getErrorMessage(payload: PredictionResponse) {
+  return formatValue(payload.detail ?? payload.error ?? payload.message);
+}
+
+function KeyValueGrid({ data }: { data: Record<string, unknown> }) {
+  const entries = Object.entries(data);
+
+  if (!entries.length) {
+    return null;
   }
 
-  const payload = json as PredictionPayload;
-  const candidate =
-    payload.prediction ??
-    payload.message ??
-    payload.result ??
-    payload.data ??
-    payload.detail ??
-    payload.error;
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {entries.map(([key, value]) => (
+        <div key={key} className="rounded border border-zinc-200 bg-white p-3">
+          <div className="text-xs font-semibold uppercase text-zinc-400">
+            {key.replaceAll("_", " ")}
+          </div>
+          <div className="mt-1 whitespace-pre-wrap text-sm text-zinc-800">
+            {formatValue(value)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  return formatPredictionValue(candidate ?? payload);
+function ContributionList({ contributions }: { contributions?: Record<string, number> }) {
+  if (!contributions || !Object.keys(contributions).length) {
+    return null;
+  }
+
+  const sortedContributions = Object.entries(contributions).sort(
+    ([, first], [, second]) => Math.abs(second) - Math.abs(first),
+  );
+
+  return (
+    <div className="rounded border border-zinc-200 bg-zinc-50 p-4">
+      <h4 className="text-sm font-semibold text-zinc-900">
+        Feature Contributions
+      </h4>
+      <div className="mt-3 space-y-2">
+        {sortedContributions.map(([key, value]) => {
+          const isPositive = value >= 0;
+          const width = `${Math.min(Math.abs(value) * 100, 100)}%`;
+
+          return (
+            <div key={key}>
+              <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                <span className="font-medium text-zinc-700">
+                  {key.replaceAll("_", " ")}
+                </span>
+                <span className={isPositive ? "text-emerald-600" : "text-red-600"}>
+                  {value >= 0 ? "+" : ""}
+                  {value.toFixed(4)}
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-zinc-200">
+                <div
+                  className={isPositive ? "h-full bg-emerald-500" : "h-full bg-red-500"}
+                  style={{ width }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DecisionDetails({ details }: { details?: unknown[] }) {
+  if (!details?.length) {
+    return null;
+  }
+
+  return (
+    <div className="rounded border border-zinc-200 bg-zinc-50 p-4">
+      <h4 className="text-sm font-semibold text-zinc-900">
+        Decision Details
+      </h4>
+      <div className="mt-3 space-y-2">
+        {details.map((detail, index) => (
+          <div key={index} className="rounded border border-zinc-200 bg-white p-3">
+            <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-700">
+              {formatValue(detail)}
+            </pre>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function FinSensePrediction({ symbol }: FinSensePredictionProps) {
   const [activePeriod, setActivePeriod] = useState<PredictionPeriod>("1d");
-  const [prediction, setPrediction] = useState("");
+  const [predictionData, setPredictionData] =
+    useState<PredictionResponse | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -83,23 +175,23 @@ export default function FinSensePrediction({ symbol }: FinSensePredictionProps) 
         const apiUrl =
           process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
         const response = await fetch(
-          `${apiUrl}/api/predict/${encodeURIComponent(symbol)}?period=${encodeURIComponent(activePeriod)}`,
+          `${apiUrl}/api/predict/${encodeURIComponent(symbol)}?period=${encodeURIComponent(activePeriod)}&explain=true`,
           { signal: controller.signal },
         );
         const json = (await response.json()) as PredictionResponse;
 
-        if (!response.ok) {
-          throw new Error(getPredictionText(json) || "Prediction request failed");
+        if (!response.ok || json.status === "error") {
+          throw new Error(getErrorMessage(json) || "Prediction request failed");
         }
 
-        setPrediction(getPredictionText(json));
+        setPredictionData(json);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
           return;
         }
 
         console.error("Failed to fetch prediction:", err);
-        setPrediction("");
+        setPredictionData(null);
         setError(
           err instanceof Error
             ? err.message
@@ -117,6 +209,11 @@ export default function FinSensePrediction({ symbol }: FinSensePredictionProps) 
     return () => controller.abort();
   }, [symbol, activePeriod]);
 
+  const prediction = predictionData?.prediction;
+  const explanation = predictionData?.explanation;
+  const signal = prediction?.signal;
+  const score = typeof prediction?.score === "number" ? prediction.score : null;
+
   return (
     <section className="mt-12 rounded-lg border border-zinc-200 bg-white shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-colors hover:border-[#061c26]/30">
       <div className="flex flex-col gap-4 border-b border-zinc-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
@@ -125,7 +222,7 @@ export default function FinSensePrediction({ symbol }: FinSensePredictionProps) 
             FinSense Prediction
           </h3>
           <p className="mt-1 text-sm text-zinc-500">
-            {symbol} forecast horizon
+            {symbol} {activePeriod} model output
           </p>
         </div>
 
@@ -148,23 +245,90 @@ export default function FinSensePrediction({ symbol }: FinSensePredictionProps) 
         </div>
       </div>
 
-      <div className="px-6 py-6">
-        <div className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50 px-5 py-5">
-          <div className="text-xs font-semibold uppercase text-zinc-400">
-            {periodDescriptions[activePeriod]}
-          </div>
-          <div className="mt-3 min-h-16 text-sm leading-relaxed text-zinc-700">
-            {isLoading ? (
-              <p>Loading {symbol} {activePeriod} prediction...</p>
-            ) : error ? (
-              <p className="text-red-600">{error}</p>
-            ) : prediction ? (
-              <pre className="whitespace-pre-wrap font-sans">{prediction}</pre>
-            ) : (
-              <p>No prediction is available for this period yet.</p>
-            )}
-          </div>
-        </div>
+      <div className="space-y-5 px-6 py-6">
+        {isLoading ? (
+          <p className="text-sm text-zinc-500">
+            Loading {symbol} {activePeriod} prediction...
+          </p>
+        ) : error ? (
+          <p className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+            {error}
+          </p>
+        ) : predictionData ? (
+          <>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded border border-zinc-200 bg-zinc-50 p-4">
+                <div className="text-xs font-semibold uppercase text-zinc-400">
+                  Signal
+                </div>
+                <div className="mt-1 text-lg font-semibold capitalize text-zinc-900">
+                  {signal || "Unavailable"}
+                </div>
+              </div>
+              <div className="rounded border border-zinc-200 bg-zinc-50 p-4">
+                <div className="text-xs font-semibold uppercase text-zinc-400">
+                  Score
+                </div>
+                <div className="mt-1 text-lg font-semibold text-zinc-900">
+                  {score === null ? "Unavailable" : score.toFixed(4)}
+                </div>
+              </div>
+              <div className="rounded border border-zinc-200 bg-zinc-50 p-4">
+                <div className="text-xs font-semibold uppercase text-zinc-400">
+                  Confidence
+                </div>
+                <div className="mt-1 text-sm text-zinc-800">
+                  {prediction?.confidence
+                    ? formatValue(prediction.confidence)
+                    : score === null
+                      ? "Unavailable"
+                      : formatPercentLike(score)}
+                </div>
+              </div>
+            </div>
+
+            {predictionData.explanatory_text ? (
+              <div className="rounded border border-zinc-200 bg-zinc-50 p-4">
+                <h4 className="text-sm font-semibold text-zinc-900">
+                  Explanation
+                </h4>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-700">
+                  {predictionData.explanatory_text}
+                </p>
+              </div>
+            ) : null}
+
+            {explanation?.summary ? (
+              <div className="rounded border border-zinc-200 bg-zinc-50 p-4">
+                <h4 className="text-sm font-semibold text-zinc-900">
+                  Model Summary
+                </h4>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-700">
+                  {explanation.summary}
+                </p>
+              </div>
+            ) : null}
+
+            {explanation ? (
+              <KeyValueGrid
+                data={{
+                  baseline_score: explanation.baseline_score,
+                  final_score: explanation.final_score,
+                }}
+              />
+            ) : null}
+
+            <ContributionList contributions={explanation?.contributions} />
+
+            <DecisionDetails details={explanation?.decision_details} />
+
+            {!predictionData.explanatory_text && !explanation ? (
+              <pre className="whitespace-pre-wrap rounded border border-zinc-200 bg-zinc-50 p-4 font-sans text-sm text-zinc-700">
+                {formatValue(predictionData)}
+              </pre>
+            ) : null}
+          </>
+        ) : null}
       </div>
     </section>
   );
