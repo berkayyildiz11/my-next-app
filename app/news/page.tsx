@@ -19,6 +19,7 @@ interface NewsResponse {
   limit: number;
   total: number;
   totalPages: number;
+  refreshing?: boolean;
   data: NewsItem[];
 }
 
@@ -28,6 +29,7 @@ export default function NewsFeed() {
   const [pageLimit, setPageLimit] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const limit = 10;
@@ -50,6 +52,7 @@ export default function NewsFeed() {
           setPageLimit(json.limit);
           setTotal(json.total);
           setTotalPages(json.totalPages);
+          setRefreshing(Boolean(json.refreshing));
         }
       } catch (error) {
         console.error("Failed to fetch news:", error);
@@ -71,6 +74,11 @@ export default function NewsFeed() {
         {loading && (
           <p className="text-center text-gray-500 mb-6">Loading news...</p>
         )}
+        {!loading && refreshing ? (
+          <p className="text-center text-gray-500 mb-6">
+            Refreshing latest news...
+          </p>
+        ) : null}
         {!loading && total > 0 ? (
           <p className="-mt-6 mb-8 text-center text-sm text-gray-500">
             Showing page {page} of {totalPages} • {total} articles
