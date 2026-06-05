@@ -20,12 +20,11 @@ import {
 
 interface StockDataPoint {
   id: string;
-  label: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  price: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+  price?: number;
   [key: string]: any;
 }
 
@@ -45,11 +44,7 @@ const chartTypes = [
 type ChartPeriod = (typeof periods)[number];
 type ChartType = (typeof chartTypes)[number]["id"];
 
-const maxVisibleCandles = 56;
-
-function formatDollars(value: number) {
-  return `$${value.toFixed(2)}`;
-}
+const maxVisibleCandles = 90;
 
 function getNumericValue(item: any, keys: string[]) {
   for (const key of keys) {
@@ -76,6 +71,10 @@ function getCandleValues(item: any, previousClose?: number) {
   return { open, high, low, close };
 }
 
+function getPointPrice(point: StockDataPoint) {
+  return Number(point.close ?? point.open ?? point.price ?? 0);
+}
+
 function buildVisibleCandles(data: StockDataPoint[]) {
   if (data.length <= maxVisibleCandles) {
     return data;
@@ -93,10 +92,14 @@ function buildVisibleCandles(data: StockDataPoint[]) {
       continue;
     }
 
-    const open = first.open;
-    const close = last.close;
-    const high = Math.max(...chunk.map((point) => point.high));
-    const low = Math.min(...chunk.map((point) => point.low));
+    const open = first.open ?? getPointPrice(first);
+    const close = last.close ?? getPointPrice(last);
+    const high = Math.max(
+      ...chunk.map((point) => point.high ?? point.close ?? point.open ?? 0),
+    );
+    const low = Math.min(
+      ...chunk.map((point) => point.low ?? point.close ?? point.open ?? 0),
+    );
 
     candles.push({
       ...last,
@@ -105,7 +108,6 @@ function buildVisibleCandles(data: StockDataPoint[]) {
       high,
       low,
       close,
-      price: close,
     });
   }
 
@@ -113,29 +115,35 @@ function buildVisibleCandles(data: StockDataPoint[]) {
 }
 
 const candlestickBodyDataKey = (entry: StockDataPoint): [number, number] => [
-  Math.min(entry.close, entry.open),
-  Math.max(entry.close, entry.open),
+  Math.min(entry.close ?? 0, entry.open ?? 0),
+  Math.max(entry.close ?? 0, entry.open ?? 0),
 ];
 
 const candlestickWhiskerDataKey = (
   entry: StockDataPoint,
 ): [number, number] => {
-  const highEnd = Math.max(entry.close, entry.open);
+  const open = entry.open ?? 0;
+  const close = entry.close ?? 0;
+  const high = entry.high ?? Math.max(open, close);
+  const low = entry.low ?? Math.min(open, close);
+  const highEnd = Math.max(open, close);
 
-  return [highEnd - entry.low, entry.high - highEnd];
+  return [highEnd - low, high - highEnd];
 };
 
 function Candlestick(props: BarShapeProps) {
   const point = props.payload as StockDataPoint | undefined;
-  const fill = point && point.open < point.close ? "green" : "red";
-  const minWidth = 7;
-  const width = Math.max(Number(props.width), minWidth);
-  const x = Number(props.x) - (width - Number(props.width)) / 2;
+  const fill =
+    point?.open !== undefined &&
+    point?.close !== undefined &&
+    point.open < point.close
+      ? "#16a34a"
+      : "#dc2626";
 
-  return <Rectangle {...props} fill={fill} width={width} x={x} />;
+  return <Rectangle {...props} fill={fill} />;
 }
 
-function StockTooltip({ active, payload }: TooltipContentProps) {
+function StockTooltip({ active, label, payload }: TooltipContentProps) {
   if (!active || !payload?.length) {
     return null;
   }
@@ -149,17 +157,33 @@ function StockTooltip({ active, payload }: TooltipContentProps) {
   return (
     <div
       style={{
-        backgroundColor: "white",
-        border: "1px solid #ccc",
-        color: "#18181b",
-        padding: "8px 12px",
+        backgroundColor: "#444444",
+        border: "2px solid #4285F4",
+        borderRadius: "8px",
+        color: "#fff",
+        padding: "10px 12px",
       }}
     >
-      <p style={{ margin: 0 }}>{`Time: ${point.label}`}</p>
-      <p style={{ margin: 0 }}>{`Open: ${formatDollars(point.open)}`}</p>
-      <p style={{ margin: 0 }}>{`Close: ${formatDollars(point.close)}`}</p>
-      <p style={{ margin: 0 }}>{`Low: ${formatDollars(point.low)}`}</p>
-      <p style={{ margin: 0 }}>{`High: ${formatDollars(point.high)}`}</p>
+      <div style={{ color: "#8fb7ff", marginBottom: "6px" }}>{label}</div>
+      {point.open !== undefined &&
+      point.high !== undefined &&
+      point.low !== undefined &&
+      point.close !== undefined ? (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          <span>Open</span>
+          <span>${point.open.toFixed(2)}</span>
+          <span>High</span>
+          <span>${point.high.toFixed(2)}</span>
+          <span>Low</span>
+          <span>${point.low.toFixed(2)}</span>
+          <span>Close</span>
+          <span>${point.close.toFixed(2)}</span>
+        </div>
+      ) : (
+        <div className="text-xs">
+          Price: ${Number(point.price ?? payload[0]?.value).toFixed(2)}
+        </div>
+      )}
     </div>
   );
 }
@@ -205,7 +229,7 @@ export const StockChart: React.FC<ChartProps> = ({
             );
             previousClose = close;
 
-            const label =
+            const timeLabel =
               activePeriod === "1d"
                 ? dateObj.toLocaleTimeString([], {
                     hour: "2-digit",
@@ -215,8 +239,7 @@ export const StockChart: React.FC<ChartProps> = ({
 
             return {
               id: `${rawDate}-${index}`,
-              label,
-              [xAxisKey]: label,
+              [xAxisKey]: timeLabel,
               [yAxisKey]: close,
               price: close,
               open,
@@ -276,81 +299,90 @@ export const StockChart: React.FC<ChartProps> = ({
             data={chartData}
             margin={{ top: 20, right: 30, left: 60, bottom: 60 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="transparent" />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="transparent"
+              vertical={true}
+            />
             <XAxis
               dataKey={xAxisKey}
-              height={5}
               stroke="#888"
-              style={{ fontSize: "12px" }}
+              textAnchor="end"
+              height={5}
+              style={{ fontSize: "12px", strokeDasharray: "3 3" }}
               tick={false}
             />
             <YAxis
+              stroke="#888"
               axisLine={false}
               domain={[
                 (dataMin: number) => Math.floor(dataMin - 0.5),
                 (dataMax: number) => Math.ceil(dataMax + 0.5),
               ]}
               orientation="right"
-              stroke="#888"
               style={{ fontSize: "12px" }}
             />
             <Tooltip content={(props) => <StockTooltip {...props} />} />
             <Line
-              activeDot={{ r: 6 }}
+              type="natural"
               dataKey={yAxisKey}
+              stroke="#4285F4"
               dot={
                 chartData.length <= 1
                   ? { r: 4, fill: "#4285F4", stroke: "#4285F4" }
                   : false
               }
-              isAnimationActive={true}
-              stroke="#4285F4"
+              activeDot={{ r: 6 }}
               strokeWidth={2}
-              type="natural"
+              isAnimationActive={true}
             />
           </LineChart>
         ) : (
           <BarChart
             data={candlestickData}
-            barCategoryGap="18%"
-            margin={{ top: 20, right: 30, left: 60, bottom: 45 }}
+            barCategoryGap="35%"
+            margin={{ top: 20, right: 30, left: 60, bottom: 50 }}
           >
+            <CartesianGrid
+              stroke="#d4d4d8"
+              strokeDasharray="0"
+              vertical={false}
+            />
             <XAxis
               dataKey={xAxisKey}
-              height={35}
               interval="preserveStartEnd"
               minTickGap={28}
               stroke="#71717a"
-              style={{ fontSize: "12px" }}
               tickLine={false}
+              height={35}
+              style={{ fontSize: "12px" }}
             />
             <YAxis
+              stroke="#71717a"
               domain={[
                 (dataMin: number) => Math.floor(dataMin - 1),
                 (dataMax: number) => Math.ceil(dataMax + 1),
               ]}
               orientation="right"
-              stroke="#71717a"
               style={{ fontSize: "12px" }}
-              tickFormatter={(value: number) => formatDollars(value)}
+              tickFormatter={(value: number) => `$${value.toFixed(2)}`}
             />
-            <CartesianGrid stroke="#d4d4d8" vertical={false} />
+            <Tooltip content={(props) => <StockTooltip {...props} />} />
             <Bar
               dataKey={candlestickBodyDataKey}
               isAnimationActive={false}
-              maxBarSize={16}
+              maxBarSize={12}
               minPointSize={2}
               shape={Candlestick}
             >
               <ErrorBar
                 dataKey={candlestickWhiskerDataKey}
+                width={0}
                 stroke="#18181b"
                 strokeWidth={1.5}
-                width={0}
                 zIndex={DefaultZIndexes.bar - 1}
               />
             </Bar>
-            <Tooltip content={(props) => <StockTooltip {...props} />} />
           </BarChart>
         )}
       </ResponsiveContainer>
