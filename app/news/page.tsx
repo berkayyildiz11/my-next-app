@@ -13,9 +13,20 @@ interface NewsItem {
   url: string;
 }
 
+interface NewsResponse {
+  status: string;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  data: NewsItem[];
+}
+
 export default function NewsFeed() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [page, setPage] = useState(1);
+  const [pageLimit, setPageLimit] = useState(10);
+  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -31,11 +42,14 @@ export default function NewsFeed() {
           `${apiUrl}/api/news?page=${page}&limit=${limit}`
         );
 
-        const json = await response.json();
+        const json = (await response.json()) as NewsResponse;
 
         if (json.status === "success") {
           setNews(json.data);
-          setTotalPages(json.totalPages ?? 1);
+          setPage(json.page);
+          setPageLimit(json.limit);
+          setTotal(json.total);
+          setTotalPages(json.totalPages);
         }
       } catch (error) {
         console.error("Failed to fetch news:", error);
@@ -57,6 +71,11 @@ export default function NewsFeed() {
         {loading && (
           <p className="text-center text-gray-500 mb-6">Loading news...</p>
         )}
+        {!loading && total > 0 ? (
+          <p className="-mt-6 mb-8 text-center text-sm text-gray-500">
+            Showing page {page} of {totalPages} • {total} articles
+          </p>
+        ) : null}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
 		  {news.map((item, index) => (
@@ -98,19 +117,19 @@ export default function NewsFeed() {
           <Button
             variant="outline"
             disabled={page === 1 || loading}
-            onClick={() => setPage((prev) => prev - 1)}
+            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
           >
             Previous
           </Button>
 
           <span className="text-sm text-gray-600">
-            Page {page} of {totalPages}
+            Page {page} of {totalPages} ({pageLimit} per page)
           </span>
 
           <Button
             variant="outline"
-            disabled={page === totalPages || loading}
-            onClick={() => setPage((prev) => prev + 1)}
+            disabled={page >= totalPages || loading}
+            onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
           >
             Next
           </Button>
