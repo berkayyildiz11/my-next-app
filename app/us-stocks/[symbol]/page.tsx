@@ -50,14 +50,24 @@ export default async function StockDetailPage(props: Props) {
           {symbol} Stock Price
         </h1>
 
-        <StockChart
-          data={chartData}
-          xAxisKey="time"
-          yAxisKey="price"
-          symbol={symbol}
-        />
+        <div className="space-y-12">
+          <section aria-label={`${symbol} stock chart`} className="relative z-0">
+            <StockChart
+              key={`chart-${symbol}`}
+              data={chartData}
+              xAxisKey="time"
+              yAxisKey="price"
+              symbol={symbol}
+            />
+          </section>
 
-        <FinSensePrediction symbol={symbol} />
+          <section
+            aria-label={`${symbol} FinSense prediction`}
+            className="relative z-0"
+          >
+            <FinSensePrediction key={`prediction-${symbol}`} symbol={symbol} />
+          </section>
+        </div>
       </div>
     </div>
   );

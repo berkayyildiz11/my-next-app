@@ -215,7 +215,7 @@ export default function FinSensePrediction({ symbol }: FinSensePredictionProps) 
   const score = typeof prediction?.score === "number" ? prediction.score : null;
 
   return (
-    <section className="mt-12 rounded-lg border border-zinc-200 bg-white shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-colors hover:border-[#061c26]/30">
+    <section className="rounded-lg border border-zinc-200 bg-white shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-colors hover:border-[#061c26]/30">
       <div className="flex flex-col gap-4 border-b border-zinc-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-xl font-bold text-zinc-900">
