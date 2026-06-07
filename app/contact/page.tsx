@@ -21,7 +21,7 @@ const developers: DeveloperContact[] = [
   {
     name: "Hüseyin Yorğa",
     role: "Founder & Developer",
-    email: "developer2@example.com",
+    email: "yorgahuseyin@example.com",
     githubUsername: "yorgahuseyin",
     linkedinUrl: "https://www.linkedin.com/in/huseyinyorga/",
   },
