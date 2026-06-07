@@ -85,45 +85,51 @@ export default function AboutPageClient() {
 
 				{/* the accordion section */}
 				<section className="mb-12">
+					<div className="mb-6 text-center">
+						<h2 className="text-3xl font-bold text-zinc-900">Frequently Asked Questions</h2>
+						<p className="mt-2 text-zinc-500">
+							Answers to the questions visitors are most likely to ask about FinSense.
+						</p>
+					</div>
 					<Accordion type="single" collapsible className="w-full max-w-4xl mx-auto bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
 						<AccordionItem value="item-1" className="border-b border-zinc-200">
 							<AccordionTrigger className="px-6 py-4 text-lg text-zinc-900 font-medium hover:text-indigo-600 hover:no-underline transition-colors data-[state=open]:text-indigo-600">
-								Accordion Item 1
+								What is FinSense?
 							</AccordionTrigger>
 							<AccordionContent className="px-6 py-4 text-zinc-700">
-								Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris in mauris ut ipsum pretium commodo id et arcu. Suspendisse ligula magna, gravida eu est vitae, gravida cursus ligula. Sed consequat eros est, id mollis dui congue sed. Praesent in sollicitudin turpis. Integer nunc odio, euismod ut urna eu, interdum auctor velit. Curabitur et est gravida, efficitur leo sit amet, vulputate nibh. Fusce at turpis ut purus consectetur pulvinar ac eu dolor. Nam dignissim eu dui at lobortis. Quisque nec nulla quis est venenatis ullamcorper. Cras laoreet massa in venenatis semper. Aliquam dapibus convallis sapien. Pellentesque lacinia scelerisque neque eu mollis. Pellentesque augue nisl, tempus sit amet posuere sed, vestibulum eget velit. Ut sit amet elementum ex.
+								FinSense is a technical platform for exploring US stock data, market news, chart patterns, and AI-assisted prediction signals in one interface. It is designed to make complex financial signals easier to inspect, compare, and understand.
 							</AccordionContent>
 						</AccordionItem>
 						<AccordionItem value="item-2" className="border-b border-zinc-200">
 							<AccordionTrigger className="px-6 py-4 text-lg text-zinc-900 font-medium hover:text-indigo-600 hover:no-underline transition-colors data-[state=open]:text-indigo-600">
-								Accordion Item 2
+								How are predictions generated?
 							</AccordionTrigger>
 							<AccordionContent className="px-6 py-4 text-zinc-700">
-								Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris in mauris ut ipsum pretium commodo id et arcu. Suspendisse ligula magna, gravida eu est vitae, gravida cursus ligula. Sed consequat eros est, id mollis dui congue sed. Praesent in sollicitudin turpis. Integer nunc odio, euismod ut urna eu, interdum auctor velit. Curabitur et est gravida, efficitur leo sit amet, vulputate nibh. Fusce at turpis ut purus consectetur pulvinar ac eu dolor. Nam dignissim eu dui at lobortis. Quisque nec nulla quis est venenatis ullamcorper. Cras laoreet massa in venenatis semper. Aliquam dapibus convallis sapien. Pellentesque lacinia scelerisque neque eu mollis. Pellentesque augue nisl, tempus sit amet posuere sed, vestibulum eget velit. Ut sit amet elementum ex.
+								The prediction pipeline combines market-pattern signals, broader time-series forecasts, and news sentiment when available. The result is shown as a directional signal with a score, confidence level, feature contributions, and decision details so users can see what influenced the output.
 							</AccordionContent>
 						</AccordionItem>
-						<AccordionItem value="item-3">
+						<AccordionItem value="item-3" className="border-b border-zinc-200">
 							<AccordionTrigger className="px-6 py-4 text-lg text-zinc-900 font-medium hover:text-indigo-600 hover:no-underline transition-colors data-[state=open]:text-indigo-600">
-								Accordion Item 3
+								Is FinSense financial advice?
 							</AccordionTrigger>
 							<AccordionContent className="px-6 py-4 text-zinc-700">
-								Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris in mauris ut ipsum pretium commodo id et arcu. Suspendisse ligula magna, gravida eu est vitae, gravida cursus ligula. Sed consequat eros est, id mollis dui congue sed. Praesent in sollicitudin turpis. Integer nunc odio, euismod ut urna eu, interdum auctor velit. Curabitur et est gravida, efficitur leo sit amet, vulputate nibh. Fusce at turpis ut purus consectetur pulvinar ac eu dolor. Nam dignissim eu dui at lobortis. Quisque nec nulla quis est venenatis ullamcorper. Cras laoreet massa in venenatis semper. Aliquam dapibus convallis sapien. Pellentesque lacinia scelerisque neque eu mollis. Pellentesque augue nisl, tempus sit amet posuere sed, vestibulum eget velit. Ut sit amet elementum ex.
+								No. FinSense is an educational and technical demonstration. Its predictions and explanations should not be treated as investment advice, trading instructions, or a guarantee of future market performance.
 							</AccordionContent>
 						</AccordionItem>
-						<AccordionItem value="item-4">
+						<AccordionItem value="item-4" className="border-b border-zinc-200">
 							<AccordionTrigger className="px-6 py-4 text-lg text-zinc-900 font-medium hover:text-indigo-600 hover:no-underline transition-colors data-[state=open]:text-indigo-600">
-								Accordion Item 4
+								How fresh is the market and news data?
 							</AccordionTrigger>
 							<AccordionContent className="px-6 py-4 text-zinc-700">
-								Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris in mauris ut ipsum pretium commodo id et arcu. Suspendisse ligula magna, gravida eu est vitae, gravida cursus ligula. Sed consequat eros est, id mollis dui congue sed. Praesent in sollicitudin turpis. Integer nunc odio, euismod ut urna eu, interdum auctor velit. Curabitur et est gravida, efficitur leo sit amet, vulputate nibh. Fusce at turpis ut purus consectetur pulvinar ac eu dolor. Nam dignissim eu dui at lobortis. Quisque nec nulla quis est venenatis ullamcorper. Cras laoreet massa in venenatis semper. Aliquam dapibus convallis sapien. Pellentesque lacinia scelerisque neque eu mollis. Pellentesque augue nisl, tempus sit amet posuere sed, vestibulum eget velit. Ut sit amet elementum ex.
+								Stock quotes, charts, and news are fetched from external data sources through the FinSense backend and local API routes. Freshness can depend on provider availability, caching, market hours, and whether the backend is currently refreshing its news cache.
 							</AccordionContent>
 						</AccordionItem>
 						<AccordionItem value="item-5">
 							<AccordionTrigger className="px-6 py-4 text-lg text-zinc-900 font-medium hover:text-indigo-600 hover:no-underline transition-colors data-[state=open]:text-indigo-600">
-								Accordion Item 5
+								How should I read the confidence and explanation details?
 							</AccordionTrigger>
 							<AccordionContent className="px-6 py-4 text-zinc-700">
-								Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris in mauris ut ipsum pretium commodo id et arcu. Suspendisse ligula magna, gravida eu est vitae, gravida cursus ligula. Sed consequat eros est, id mollis dui congue sed. Praesent in sollicitudin turpis. Integer nunc odio, euismod ut urna eu, interdum auctor velit. Curabitur et est gravida, efficitur leo sit amet, vulputate nibh. Fusce at turpis ut purus consectetur pulvinar ac eu dolor. Nam dignissim eu dui at lobortis. Quisque nec nulla quis est venenatis ullamcorper. Cras laoreet massa in venenatis semper. Aliquam dapibus convallis sapien. Pellentesque lacinia scelerisque neque eu mollis. Pellentesque augue nisl, tempus sit amet posuere sed, vestibulum eget velit. Ut sit amet elementum ex.
+								Confidence describes how strongly the model leans toward its signal for the selected period. Explanation details show which signals pushed the score up or down, helping users understand the model's reasoning instead of seeing only a final label.
 							</AccordionContent>
 						</AccordionItem>
 					</Accordion>

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Footer(){
     return(
         <footer className="bg-slate-900 text-gray-400 mt-20">
@@ -16,9 +18,10 @@ export default function Footer(){
                 <div>
                     <h3 className="text-white font-medium mb-3">Navigation</h3>
                     <ul className="space-y-2">
-                        <li>Dashboard</li>
-                        <li>Stocks</li>
-                        <li>About</li>
+                        <li><Link href="/">Dashboard</Link></li>
+                        <li><Link href="/us-stocks">Stocks</Link></li>
+                        <li><Link href="/news">News</Link></li>
+                        <li><Link href="/about">About</Link></li>
                     </ul>
                 </div>
 
@@ -26,9 +29,11 @@ export default function Footer(){
                 <div>
                     <h3 className="text-white font-medium mb-3">Links</h3>
                     <ul className="space-y-2">
-                        <li>GitHub</li>
-                        <li>Documentation</li>
-                        <li>Contact</li>
+                        <li><Link href="https://github.com/berkayyildiz11/my-next-app" 
+                            target="_blank" rel="noopener noreferrer">GitHub</Link></li>
+                        <li><Link href="https://github.com/berkayyildiz11/rtfa-ml-backend" 
+                            target="_blank" rel="noopener noreferrer">Documentation</Link></li>
+                        <li><Link href="/contact">Contact</Link></li>
                     </ul>
                 </div>
 

@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FinSense
+
+FinSense is a Next.js application for real-time US stock visualization, market news, and AI-assisted stock prediction. It combines live quote data, charting, paginated news, and FinSense model outputs with SHAP-style explanation details.
+
+## Features
+
+- Home page with popular stock cards backed by live quote values.
+- US stocks table with search, sorting, and quote refresh behavior.
+- Dynamic stock detail pages at `/us-stocks/[symbol]`.
+- Recharts line and candlestick chart modes.
+- FinSense prediction panel with period controls, confidence, explanation summary, feature contributions, and decision details.
+- News page with backend-driven pagination using `page`, `limit`, `total`, `totalPages`, `refreshing`, and `data`.
+- Static About and Contact pages with page metadata for browser tab titles.
+
+## Tech Stack
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS
+- Recharts
+- TanStack Table
+- Radix UI
+- Lucide icons
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create a local environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `FINNHUB_API_KEY` | Yes | Server-side API key used by `/api/stock` for live quotes. |
+| `NEXT_PUBLIC_API_URL` | Yes | Backend base URL used by charts, predictions, and news. |
 
-## Learn More
+Do not commit real API keys.
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev      # Start local development server
+npm run build    # Create production build
+npm run start    # Start production server
+npm run server   # Run websocket server entrypoint
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Main Routes
 
-## Deploy on Vercel
+| Route | Description |
+| --- | --- |
+| `/` | Home / main menu with hero and popular stock grid. |
+| `/us-stocks` | Full US stocks list. |
+| `/us-stocks/[symbol]` | Stock detail chart and FinSense prediction panel. |
+| `/news` | Paginated market news feed. |
+| `/about` | Project overview and disclaimer. |
+| `/contact` | Contact page. |
+| `/main-menu` | Redirects to `/`. |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## API Usage
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This app uses one local Next.js API route and several backend API endpoints.
+
+Local quote route:
+
+```text
+GET /api/stock?symbol=AAPL
+```
+
+Backend chart route:
+
+```text
+GET {NEXT_PUBLIC_API_URL}/api/stocks/AAPL/chart?period=1d
+```
+
+Backend prediction route:
+
+```text
+GET {NEXT_PUBLIC_API_URL}/api/predict/AAPL?period=1d&explain=true
+```
+
+Backend news route:
+
+```text
+GET {NEXT_PUBLIC_API_URL}/api/news?page=1&limit=10
+```
+
+## Notes
+
+- The stock detail page keeps the chart and prediction panel as separate components so their loading states do not control each other.
+- The news page uses `totalPages` from the backend response rather than calculating pages from `data.length`.
+- Page metadata is exported from server route components. Hook-based UI is placed in client components where needed.
