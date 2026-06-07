@@ -72,3 +72,13 @@ export default async function StockDetailPage(props: Props) {
     </div>
   );
 }
+
+export async function generateMetadata(props: Props) {
+  const params = await props.params;
+  const symbol = params.symbol.toUpperCase();
+
+  return {
+    title: `${symbol} Stock | FinSense`,
+    description: `Real-time financial analysis and stock prediction for ${symbol}`,
+  };
+}

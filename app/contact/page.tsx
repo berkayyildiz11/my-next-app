@@ -32,3 +32,8 @@ export default function ComingSoon({ title = "Coming Soon", description = "We ar
     </div>
   );
 }
+
+export const metadata = {
+  title: "Contact | FinSense",
+  description: "Get in touch with the FinSense team for any inquiries or support.",
+};

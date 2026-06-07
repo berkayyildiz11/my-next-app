@@ -1,4 +1,3 @@
-"use client";
 import Hero from "@/components/Hero";
 import StockGrid from "@/components/StockGrid";
 
@@ -28,3 +27,8 @@ export default function Home() {
           </div>
       );
 }
+
+export const metadata = {
+  title: "Home | FinSense",
+  description: "Real-time financial analysis and stock prediction platform",
+};

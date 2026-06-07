@@ -146,3 +146,8 @@ export default function NewsFeed() {
     </div>
   );
 }
+
+export const metadata = {
+  title: "News | FinSense",
+  description: "Stay updated with the latest market news and financial insights.",
+};

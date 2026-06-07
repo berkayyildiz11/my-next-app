@@ -159,3 +159,8 @@ export default function About() {
 	</main>
   )
 }
+
+export const metadata = {
+  title: "About | FinSense",
+  description: "Learn more about FinSense and our mission to provide real-time financial analysis and stock prediction.",
+};
